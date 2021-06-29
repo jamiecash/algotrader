@@ -1,0 +1,10 @@
+---
+charts:
+  colormap:
+    __label: Color Map
+    __helptext: The matplotlib color pallet to use for plotting graphs. A list of pallets is available at https://matplotlib.org/stable/tutorials/colors/colormaps.html
+developer:
+  inspection:
+    __label: Inspection
+    __helptext: Provide GUI Inspection guidelines for developers modifying the GUI.
+...
