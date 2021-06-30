@@ -1,4 +1,19 @@
 ---
+general:
+  window_refresh: 1
+database:
+  dialect: postgresql
+  host: localhost
+  database: algotrader
+  username: algotrader
+datasources:
+  mt5:
+    class: algotrader.connections.ds.MT5DataSource
+    market_watch_only: true
+charts:
+  colormap: Dark2
+developer:
+  inspection: true
 logging:
   version: 1
   disable_existing_loggers: false
@@ -35,15 +50,11 @@ logging:
       - console
       - file
       propagate: 0
-charts:
-  colormap: Dark2
-developer:
-  inspection: true
 window:
-  x: 357
-  y: 222
-  width: 1051
-  height: 446
+  x: 62
+  y: 37
+  width: 1451
+  height: 928
   style: 541072960
 settings_window:
   x: 374

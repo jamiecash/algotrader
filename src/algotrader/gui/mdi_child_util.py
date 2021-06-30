@@ -1,7 +1,13 @@
+"""
+Utility dialogs for the application including:
+    * A log file viewer; and
+    * A help file viewer.
+"""
+
 import definitions
 import markdown
 import wx
-import wx.html
+import wx.html2
 
 
 class MDIChildHelp(wx.MDIChildFrame):
@@ -21,16 +27,20 @@ class MDIChildHelp(wx.MDIChildFrame):
         panel.SetSizer(sizer)
 
         # HtmlWindow
-        html_widget = wx.html.HtmlWindow(parent=panel, id=wx.ID_ANY,
-                                         style=wx.html.HW_SCROLLBAR_AUTO | wx.html.HW_NO_SELECTION)
+        html_widget = wx.html2.WebView.New(panel)
         sizer.Add(html_widget, 1, wx.ALL | wx.EXPAND)
 
-        # Load the help file, convert markdown to HTML and display. The markdown library doesnt understand the shell
-        # format so we will remove.
+        # Load the help file, convert markdown to HTML and save.
         markdown_text = open(definitions.HELP_FILE).read()
-        markdown_text = markdown_text.replace("```shell", "```")
-        html = markdown.markdown(markdown_text)
-        html_widget.SetPage(html)
+        html = '<link rel="stylesheet" href="codehilite.css"/>'
+        html += markdown.markdown(markdown_text, extensions=['fenced_code', 'codehilite'])
+        html_filename = fr'{definitions.HELP_FILE}'.replace('.md', '.html')
+        html_file = open(html_filename, 'w')
+        html_file.write(html)
+        html_file.close()
+
+        # Display
+        html_widget.LoadURL(html_filename)
 
 
 class MDIChildLog(wx.MDIChildFrame):
@@ -68,4 +78,6 @@ class MDIChildLog(wx.MDIChildFrame):
 
         # Scroll to bottom
         self.__log_window.SetInsertionPoint(-1)
+
+
 

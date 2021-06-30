@@ -1,7 +1,15 @@
+"""
+The MDI Frame for the application and a FrameManager which handles the opening and raising of child frames
+"""
+
 import importlib
 import logging
 import wx
 import wxconfig as cfg
+from secrets import secrets
+from algotrader.connections.db import Database
+from algotrader.connections.ds import DataSource
+from algotrader.data.sync import Sync
 
 
 class MDIFrame(wx.MDIParentFrame):
@@ -9,6 +17,9 @@ class MDIFrame(wx.MDIParentFrame):
     The MDI Frame window for the application
     """
     __log = None  # The logger
+    __timer = None  # Timer to refresh
+    __database = None  # This applications database
+    __datasources = None  # This applications datasources
 
     def __init__(self):
         # Super
@@ -20,8 +31,10 @@ class MDIFrame(wx.MDIParentFrame):
         # Create logger
         self.__log = logging.getLogger(__name__)
 
-        # Status bar.
-        statusbar = self.CreateStatusBar()
+        # Status bar. 3 panes, 1st for database connection status, 2nd for data source connection status and 3rd for
+        # general status messages.
+        statusbar = self.CreateStatusBar(3)
+        statusbar.SetStatusWidths([150, 150, -1])
 
         # Create menu bar
         menubar = wx.MenuBar()
@@ -35,6 +48,12 @@ class MDIFrame(wx.MDIParentFrame):
                   file_menu.Append(wx.ID_ANY, "E&xit", "Quits the application."))
         menubar.Append(file_menu, "&File")
 
+        # Create data menu
+        data_menu = wx.Menu()
+        self.Bind(wx.EVT_MENU, self.on_data_symbols,
+                  data_menu.Append(wx.ID_ANY, "&Symbols", "Sync application symbols from data sources and edit"))
+        menubar.Append(data_menu, "&Data")
+
         # Create help menu
         help_menu = wx.Menu()
         self.Bind(wx.EVT_MENU, self.__on_view_log,
@@ -43,8 +62,50 @@ class MDIFrame(wx.MDIParentFrame):
                   help_menu.Append(wx.ID_ANY, "Help", "Show application usage instructions."))
         menubar.Append(help_menu, "&Help")
 
+        # Bind timer to refresh open child windows
+        self.__timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.__refresh, self.__timer)
+        self.__timer.Start(cfg.Config().get('general.window_refresh') * 1000)
+
         # Bind window close event
         self.Bind(wx.EVT_CLOSE, self.__on_close, self)
+
+        # Connect to database
+        self.__connect()
+
+    def __connect(self):
+        """
+        Connects to database and data sources
+        :return:
+        """
+        # Get db connection params
+        params = {
+            'dialect': cfg.Config().get('database.dialect'),
+            'host': cfg.Config().get('database.host'),
+            'database': cfg.Config().get('database.database'),
+            'username': cfg.Config().get('database.username'),
+            'password': secrets.get('db_pass')
+        }
+
+        # Check if any are not configured
+        nullparams = False
+        for key in params.keys():
+            param = params[key]
+            if param is None:
+                self.__log.warning(f"Database connection param {key} is not configured. Application cannot be used.")
+                self.SetStatusText(f"Database connection param {key} is not configured. Application cannot be used.", 2)
+                nullparams = True
+
+        # Connect if none of the params were None
+        if not nullparams:
+            self.__database = Database(params['dialect'], params['host'], params['database'], params['username'],
+                                       params['password'])
+
+        self.SetStatusText(f"DB Connected: {'Yes' if self.__database.connected else 'No'}", 0)
+
+        # Get datasources
+        self.__datasources = DataSource.all_instances()
+        self.SetStatusText(f"Num Data Sources: {len(self.__datasources)}", 1)
 
     def __on_close(self, event):
         """
@@ -63,6 +124,16 @@ class MDIFrame(wx.MDIParentFrame):
 
         # End
         event.Skip()
+
+    def on_data_symbols(self, evt):
+        """
+        Sync symbols and open edit frame
+        :param evt:
+        :return:
+        """
+        Sync.sync_symbols(database=self.__database, datasources=DataSource.all_instances())
+
+        # TODO Edit frame
 
     def __on_exit(self, evt):
         # Close
@@ -94,6 +165,19 @@ class MDIFrame(wx.MDIParentFrame):
         """
         FrameManager.open_frame(parent=self, frame_module='algotrader.gui.mdi_child_util',
                                 frame_class='MDIChildLog', raise_if_open=True)
+
+    def __refresh(self, evt):
+        """
+        Refreshes all open child windows that have implemented a refresh method. Called on timer.
+        :param evt:
+        :return:
+        """
+        children = self.GetChildren()
+
+        for child in children:
+            # check if child has refresh method
+            if getattr(child, 'refresh', None) is not None and callable(getattr(child, 'refresh')):
+                child.refresh()
 
 
 class FrameManager:

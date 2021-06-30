@@ -1,4 +1,17 @@
 ---
+general:
+  window_refresh:
+    __label: Refresh Interval
+    __helptext: How often to refresh the child windows in seconds.
+datasources:
+  mt5:
+    __label: MetaTrader5
+    class:
+      __label: Class
+      __helptext: The class that contains the data source connection and data retrieval code. Must implement algotrader.connections.ds.DataSource
+    market_watch_only:
+      __label: Market Watch Only
+      __helptext: Only include symbols contained in MarketWatch
 charts:
   colormap:
     __label: Color Map

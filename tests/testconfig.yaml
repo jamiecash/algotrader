@@ -1,0 +1,6 @@
+---
+datasources:
+  mt5:
+    class: algotrader.connections.ds.MT5DataSource
+    market_watch_only: True
+...
